@@ -1,22 +1,22 @@
 ﻿console.log("🔥 content.js đã được inject!");
 
-document.addEventListener("keydown", function(event) {
-    if (event.key === "Shift") {
-        event.preventDefault(); // Ngăn hành vi mặc định của phím Tab
-        const selection = window.getSelection();
-        const selectedText = window.getSelection().toString().trim();
-        if (!selectedText) return;
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Shift") {
+    event.preventDefault(); // Ngăn hành vi mặc định của phím Tab
+    const selection = window.getSelection();
+    const selectedText = window.getSelection().toString().trim();
+    if (!selectedText) return;
 
-        console.log("✅ Văn bản được chọn:", selectedText);
+    console.log("✅ Văn bản được chọn:", selectedText);
 
-        chrome.storage.sync.get("geminiApiKey", function(data) {
-          if (!data.geminiApiKey) {
-              alert("Vui lòng nhập API Key trong extension popup!");
-              return;
-          }
-          translateWithGemini(selectedText, data.geminiApiKey, selection);
-      });
-    }
+    chrome.storage.sync.get("geminiApiKey", function (data) {
+      if (!data.geminiApiKey) {
+        alert("Vui lòng nhập API Key trong extension popup!");
+        return;
+      }
+      translateWithGemini(selectedText, data.geminiApiKey, selection);
+    });
+  }
 });
 
 const createPrompt = (text) => {
@@ -33,32 +33,35 @@ const translateWithGemini = async (text, apiKey, selection) => {
   let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
   let requestBody = {
-      contents: [{ parts: [{ text: createPrompt(text) }] }]
+    contents: [{ parts: [{ text: createPrompt(text) }] }]
   };
 
+  // 🟢 Hiển thị popup "Đang dịch..."
+  let popup = showPopup(selection, "Đang dịch...");
+
   try {
-      let response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody)
-      });
+    let response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(requestBody)
+    });
 
-      if (!response.ok) {
-          throw new Error(`Lỗi HTTP: ${response.status}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Lỗi HTTP: ${response.status}`);
+    }
 
-      let result = await response.json();
-      console.log("Kết quả API:", result);
+    let result = await response.json();
+    console.log("Kết quả API:", result);
 
-      if (result && result.candidates && result.candidates.length > 0) {
-        let translatedText = result.candidates[0].content.parts[0].text;
-        showPopup(selection, translatedText);
-      } else {
-        showPopup(selection, "Lỗi: API không trả về kết quả hợp lệ.");
-      }
+    if (result && result.candidates && result.candidates.length > 0) {
+      let translatedText = result.candidates[0].content.parts[0].text;
+      popup.innerText = translatedText; // 🟢 Cập nhật popup với bản dịch
+    } else {
+      popup.innerText = "Lỗi: API không trả về kết quả hợp lệ.";
+    }
   } catch (error) {
-      console.error("Lỗi khi gọi API:", error);
-      showPopup(selection, "Lỗi khi gọi API: " + error.message);
+    console.error("Lỗi khi gọi API:", error);
+    popup.innerText = "Lỗi khi gọi API: " + error.message;
   }
 };
 
@@ -92,10 +95,11 @@ const showPopup = (selection, text) => {
 
   // Xóa popup khi click ra ngoài
   document.addEventListener("click", function removePopup(event) {
-      if (!popup.contains(event.target)) {
-          popup.remove();
-          document.removeEventListener("click", removePopup);
-      }
+    if (!popup.contains(event.target)) {
+      popup.remove();
+      document.removeEventListener("click", removePopup);
+    }
   });
-};
 
+  return popup; // 🔥 Trả về popup để cập nhật nội dung sau này
+};
