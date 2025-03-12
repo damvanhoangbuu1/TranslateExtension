@@ -86,9 +86,11 @@ const showPopup = (selection, text) => {
   popup.style.padding = "8px";
   popup.style.borderRadius = "5px";
   popup.style.fontSize = "14px";
-  popup.style.zIndex = "9999";
+  popup.style.zIndex = "99999";
   popup.style.boxShadow = "0px 0px 10px rgba(0,0,0,0.2)";
-  popup.style.maxWidth = "300px";
+  popup.style.maxWidth = "600px";
+  popup.style.maxHeight = "400px";
+  popup.style.overflow = "auto";
   popup.style.wordWrap = "break-word";
 
   document.body.appendChild(popup);
