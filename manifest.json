@@ -1,8 +1,8 @@
 {
     "manifest_version": 3,
-    "name": "Đại Ca Extension",
-    "version": "1.0",
-    "description": "Extension đầu tay của đại ca!",
+    "name": "Get Name trang 69shu",
+    "version": "2.0",
+    "description": "Get Name trang 69shu",
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
