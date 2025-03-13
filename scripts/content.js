@@ -18,14 +18,13 @@ const createPrompt = (text) => {
   //                 Đảm bảo rằng chỉ có thuật ngữ/tên riêng đã dịch được bao gồm sau dấu bằng, không có dấu ngoặc kép hoặc văn bản xung quanh. 
   //                 Ưu tiên tính chính xác và phù hợp về mặt văn hóa trong các bản dịch.
   //                 Output cuối cùng phải là một chuỗi duy nhất chứa tất cả các cặp thuật ngữ/bản dịch.`;
-  return `${text} Phân tích văn bản đã cung cấp và trích xuất tất cả các thuật ngữ kỹ thuật và tên riêng. 
+  return `${text} Phân tích văn bản đã cung cấp và trích xuất tất cả các tên riêng. 
   Đối với mỗi mục đã trích xuất, cung cấp bản dịch tương đương sang tiếng Việt, xem xét cả tính chính xác và phù hợp về mặt văn hóa. 
   Trả về kết quả dưới dạng một chuỗi JSON hợp lệ duy nhất. 
   Mỗi cặp khóa-giá trị trong JSON phải đại diện cho thuật ngữ gốc (tiếng Trung) và bản dịch tương đương (tiếng Việt) tương ứng. 
-  Giá trị đã dịch *chỉ* chứa bản dịch tiếng Việt, không có bất kỳ văn bản hoặc dấu ngoặc kép nào xung quanh. 
+   Giá trị đã dịch *chỉ* chứa *duy nhất* bản dịch tiếng Việt, không cần mở ngoặc đơn giải thích, không có bất kỳ văn bản, nhãn hoặc dấu ngoặc kép bổ sung nào.. 
   Đảm bảo đầu ra là một đối tượng JSON có cấu trúc tốt. Ví dụ: '{"Original Term":"Translated Term", "Another Term":"Another Translated Term"}'
-  . Ưu tiên các bản dịch theo tiêu chuẩn ngành nếu có và chỉ rõ bất kỳ thuật ngữ nào không có bản dịch tiếng Việt trực tiếp,
-   đề xuất một phương án thay thế hoặc chuyển tự phù hợp.`;
+  . Ưu tiên các bản dịch theo tiêu chuẩn ngành nếu có và chỉ rõ bất kỳ thuật ngữ nào không có bản dịch tiếng Việt trực tiếp.`;
 }
 
 const translateWithGemini = async (text, apiKey) => {
@@ -62,7 +61,7 @@ const translateWithGemini = async (text, apiKey) => {
           addTranslations(JSON.parse(translatedText.replace('```json', '').replace('```', '')));
         }else{
           addTranslations(JSON.parse(translatedText.replace('```json', '').replace('```', '')));
-          getAllTranslations();
+          exportIndexedDBToFile();
         }
        }, 2000);
     } else {
@@ -73,19 +72,56 @@ const translateWithGemini = async (text, apiKey) => {
   }
 };
 
-async function getAllTranslations() {
-  let db = await openDatabase();
-  let transaction = db.transaction(["translations"], "readonly");
-  let store = transaction.objectStore("translations");
-
-  let request = store.getAll();
-  request.onsuccess = () => {
-      console.log("📂 Danh sách tất cả dữ liệu:", request.result);
-  };
+function saveToFile(filename, content) {
+  const blob = new Blob([content], { type: "text/plain" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
-// Lấy toàn bộ dữ liệu từ IndexedDB
-getAllTranslations();
+async function getAllTranslations() {
+  return new Promise((resolve, reject) => {
+      let request = indexedDB.open("TranslationDB", 1);
+      
+      request.onsuccess = function(event) {
+          let db = event.target.result;
+          let transaction = db.transaction(["translations"], "readonly");
+          let store = transaction.objectStore("translations");
+
+          let getAllRequest = store.getAll();
+          getAllRequest.onsuccess = () => resolve(getAllRequest.result);
+          getAllRequest.onerror = () => reject("❌ Lỗi khi đọc dữ liệu!");
+      };
+
+      request.onerror = function() {
+          reject("❌ Lỗi khi mở IndexedDB!");
+      };
+  });
+}
+
+
+async function exportIndexedDBToFile() {
+  try {
+      let data = await getAllTranslations();
+
+      if (data.length === 0) {
+          alert("⚠️ Không có dữ liệu để xuất!");
+          return;
+      }
+
+      // Chuyển dữ liệu thành chuỗi theo format "key=value"
+      let textContent = data.map(entry => `${entry.key}=${entry.name}`).join("\n");
+
+      // Lưu vào file txt
+      saveToFile(`translations${Date.now()}.txt`, textContent);
+      console.log("✅ File translations.txt đã được lưu!");
+  } catch (error) {
+      console.error(error);
+  }
+}
 
 
 function openDatabase() {
