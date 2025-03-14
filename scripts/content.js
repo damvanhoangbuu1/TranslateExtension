@@ -30,7 +30,7 @@ const createPrompt = (text) => {
 }
 
 const translateWithGemini = async (text, apiKey, selection) => {
-  let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  let url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${apiKey}`;
 
   let requestBody = {
     contents: [{ parts: [{ text: createPrompt(text) }] }]
